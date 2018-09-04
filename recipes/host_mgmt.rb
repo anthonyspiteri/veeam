@@ -1,6 +1,6 @@
 #
 # Cookbook:: veeam
-# Recipe:: proxy_server
+# Recipe:: host_mgmt
 #
 # maintainer:: Exosphere Data, LLC
 # maintainer_email:: chef@exospheredata.com
@@ -14,13 +14,6 @@ raise ArgumentError, error_message unless node['platform'] == 'windows'
 
 # If this host is older than Windows 2012, we should abort the process for an unsupported platform
 raise ArgumentError, error_message if node['platform_version'].to_f < '6.2.9200'.to_f # '6.2.9200' is the numeric platform_version for Windows 2012
-
-%w(FS-FileServer Print-Server).each do |feature|
-  windows_feature feature do
-    install_method :windows_feature_powershell
-    action :install
-  end
-end
 
 veeam_prerequisites 'Install Veeam Prerequisites' do
   package_url node['veeam']['installer']['package_url']
@@ -48,22 +41,17 @@ veeam_upgrade node['veeam']['build'] do
   action :install
 end
 
-proxy_server = if node['veeam']['proxy']['use_ip_address']
-                 node['ipaddress']
-               else
-                 node['hostname']
-               end
-
-veeam_proxy proxy_server do
-  vbr_server      node['veeam']['proxy']['vbr_server']
-  vbr_server_port node['veeam']['proxy']['vbr_port']
-  vbr_username    node['veeam']['proxy']['vbr_username']
-  vbr_password    node['veeam']['proxy']['vbr_password']
-  proxy_username  node['veeam']['proxy']['proxy_username']
-  proxy_password  node['veeam']['proxy']['proxy_password']
-  description     node['veeam']['proxy']['description']
-  max_tasks       node['veeam']['proxy']['max_tasks']
-  transport_mode  node['veeam']['proxy']['transport_mode']
-  action :add
-  only_if { node['veeam']['proxy']['register'] }
+unless node['veeam']['host']['server'].nil?
+  veeam_host node['veeam']['host']['server'] do
+    vbr_server      node['veeam']['host']['vbr_server']
+    vbr_server_port node['veeam']['host']['vbr_port']
+    vbr_username    node['veeam']['host']['vbr_username']
+    vbr_password    node['veeam']['host']['vbr_password']
+    host_username   node['veeam']['host']['host_username']
+    host_password   node['veeam']['host']['host_password']
+    description     node['veeam']['host']['description']
+    host_type       node['veeam']['host']['type']
+    action          node['veeam']['host']['action'].to_sym
+    only_if { !node['veeam']['host']['server'].nil? }
+  end
 end
